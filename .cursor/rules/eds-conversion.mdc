@@ -1,0 +1,473 @@
+---
+description: Generic Gatsby-to-EDS conversion workflow for any repo in this directory. Triggered by "@<repo-name> start eds conversion" or "@<repo-name> continue eds conversion".
+alwaysApply: true
+---
+
+# Gatsby to EDS Conversion Workflow
+
+This rule orchestrates the conversion of **any content repo** in this directory from Gatsby to EDS.
+Activate with: **"@\<repo-name\> start eds conversion"** or **"@\<repo-name\> continue eds conversion"**.
+
+**Source**: Last updated referring to [Gatsby-to-EDS conversion wiki as of **2026-03-16**](https://wiki.corp.adobe.com/spaces/AdobeCloudPlatform/pages/3547041099/Converting+and+Onboarding+to+EDS).
+
+## Repo Details
+
+The user will reference a specific repo folder (e.g., `@adobe-assurance-public-apis`) when invoking the workflow.
+From the referenced folder name, derive the following variables and use them throughout:
+
+- **`{REPO_NAME}`**: The folder name the user referenced (e.g., `adobe-assurance-public-apis`).
+- **`{PATH_PREFIX}`**: `/{REPO_NAME}/` (e.g., `/adobe-assurance-public-apis/`). Verify this against `pathPrefix` in `gatsby-config.js` during Phase 1; if they differ, use the value from `gatsby-config.js`.
+- **Template repo**: `https://github.com/AdobeDocs/dev-docs-template/blob/main/`
+- **Conversion guide**: See `conversion.md` in the parent ADP directory for full reference.
+
+**All commands in this workflow MUST be run inside the `{REPO_NAME}` directory** (i.e., set `working_directory` to the repo folder).
+
+## Workflow Instructions
+
+When the user says "start eds conversion" (with a repo reference), initialize the full checklist with `TodoWrite` using the phases below,
+then begin executing from Phase 1. When the user says "continue eds conversion", read the current todo list
+and resume from the first non-completed phase.
+
+At each **CHECKPOINT**, you MUST:
+1. Stop all automated work.
+2. Display the checkpoint instructions to the engineer (what needs to be done manually, with relevant links).
+3. Use `AskQuestion` to ask the engineer to confirm completion before proceeding.
+
+### Commit Protocol
+
+Every commit in this workflow MUST follow this protocol:
+
+1. **Stage only conversion-related changed files.** Do NOT stage `yarn.lock`, `node_modules/`, or other non-conversion artifacts. Each commit section specifies which files to stage.
+2. **Show the diff.** Run `git diff --staged` and display the output to the engineer.
+3. **Ask for approval.** Use `AskQuestion` with options: "Looks good, commit" / "Need changes". Do NOT commit until the engineer selects "Looks good, commit". If the engineer selects "Need changes", wait for them to make changes and re-run the protocol from step 1.
+4. **Commit without co-author.** NEVER add `Co-authored-by` trailers to commit messages. The commit message must contain ONLY the specified message text — no trailers, no signatures, no co-author lines.
+
+---
+
+## Phase 1: Branch & Config Verification [AUTO]
+
+1. Run `git checkout -b eds-migration` to create the migration branch.
+2. Read `gatsby-config.js` and verify it has a `pathPrefix`. Report the path prefix and navigation structure found.
+
+## CHECKPOINT A: Google Sheets Setup [MANUAL]
+
+Pause and instruct the engineer to:
+
+1. Add path prefix `{PATH_PREFIX}` to the **devsitepaths** spreadsheet:
+   - Stage: https://docs.google.com/spreadsheets/d/1GqZ6QJwOhSG-beyd0nIEJ_cHd5PGBTghsqhbTM9nqMs/edit?usp=sharing
+   - Prod: https://docs.google.com/spreadsheets/d/1V_mVmnlREE-QgCM8XA2VNXtRhoTlrFFSCF3Wh_8-4ig/edit?gid=0#gid=0
+   - Publish to EDS if not already existing.
+2. Verify path prefix exists in **product-index-map** spreadsheet:
+   - Stage: https://docs.google.com/spreadsheets/d/12avDPZeNzR9yLwf9Z-Obv7lzqj96c9glvT3U62aYxeE/edit?gid=0#gid=0
+   - Prod: https://docs.google.com/spreadsheets/d/1qmy0ma2wmWDIyU1p1tW0a45i5JnbhEAbUOfRb0lv4rE/edit?gid=0#gid=0
+   - Publish to EDS if not already existing.
+
+Use `AskQuestion` with options: "Completed" / "Skip (already done)" / "Need help". Only proceed when engineer confirms.
+
+---
+
+## Phase 2: Copy Template Files [AUTO]
+
+1. Update `package.json`:
+   - Remove all Gatsby-related fields: `dependencies`, `resolutions`, `remarkConfig`, `packageManager`.
+   - Replace `scripts` with the template scripts from [dev-docs-template/package.json](https://github.com/AdobeDocs/dev-docs-template/blob/main/package.json).
+   - Replace `devDependencies` with the template devDependencies. Only keep extra devDependencies from the original repo if the repo specifically requires them.
+   - **Do not add, remove, or change the `.gitignore` file in this phase.**
+2. Download and replace workflow files in `.github/workflows/`:
+   - `build-auto-generated-files.yml` from `https://raw.githubusercontent.com/AdobeDocs/dev-docs-template/main/.github/workflows/build-auto-generated-files.yml`
+     This workflow auto-generates `src/pages/contributors.json` and `src/pages/adp-site-metadata.json` on every PR via CI. These files are also generated locally by `npm run dev` at startup (via `dev.js`). The engineer does NOT need to create or commit these files manually during conversion — they will be auto-committed to the PR branch when the eds-migration PR is created at CHECKPOINT I. If they appear as untracked files in `git status` after running local dev, they can be ignored.
+   - `deploy.yml` from `https://raw.githubusercontent.com/AdobeDocs/dev-docs-template/main/.github/workflows/deploy.yml`
+   - `stage.yml` from `https://raw.githubusercontent.com/AdobeDocs/dev-docs-template/main/.github/workflows/stage.yml`
+   - `lint.yml` from `https://raw.githubusercontent.com/AdobeDocs/dev-docs-template/main/.github/workflows/lint.yml`
+   - Delete old workflows: `github-pages.yml`, `test-pull-request.yml`.
+3. Run `npm install` to install new dependencies.
+4. Commit Phase 2 changes — follow the **Commit Protocol**:
+   - Stage:
+     ```
+     git add package.json \
+       .github/workflows/build-auto-generated-files.yml .github/workflows/deploy.yml .github/workflows/stage.yml .github/workflows/lint.yml
+     ```
+     *Do not stage or modify any `.gitignore` files.*
+   - Show diff, ask engineer for approval, then commit with message: `add EDS template files and update package.json`
+
+---
+
+## Phase 3: Content Management [AUTO + CHECKPOINTS]
+
+### Step 3a: Verify Trailing Slashes [AUTO]
+Read `gatsby-config.js` page paths. For each path ending with `/`, verify a corresponding `index.md` exists under `src/pages/`. Report any mismatches.
+
+### Step 3b: Verify File Placement [AUTO]
+Scan the directory tree. Confirm `.md` files are under `src/pages/`. Confirm JSON files (e.g., OpenAPI/Redocly specs like `introspection.json`, `petstore.json`) should be in `static/` or outside `src/pages/`. Report the current state and flag any JSON spec files found inside `src/pages/` for engineer review.
+
+### Step 3c: Build Navigation [AUTO]
+Run `npm run buildNavigation` to generate `src/pages/config.md`.
+
+## CHECKPOINT B: Review config.md [MANUAL]
+
+Pause and instruct the engineer to:
+
+1. Open the generated `src/pages/config.md` and verify navigation structure.
+2. Add back any missing buttons (e.g., Submit Feedback, Console) that `buildNavigation` may have removed.
+3. Make any manual edits needed.
+
+Use `AskQuestion` with options: "config.md looks good" / "I've made edits, continue" / "Need help".
+
+### Step 3c1: Commit config.md [AUTO]
+After engineer confirms config.md is ready, commit it separately — follow the **Commit Protocol**:
+   - Stage:
+     ```
+     git add src/pages/config.md
+     ```
+   - Show diff, ask engineer for approval, then commit with message: `add config.md navigation structure`
+
+### Step 3d: Build Redirections [AUTO]
+Run `npm run buildRedirections` to generate `redirects.json`.
+Then format `redirects.json` with standard indentation: run `node -e "const fs=require('fs');const f='redirects.json';fs.writeFileSync(f,JSON.stringify(JSON.parse(fs.readFileSync(f,'utf8')),null,2)+'\n')"`.
+
+### Step 3e: Normalize Links [AUTO]
+Run `npm run normalizeLinks`.
+
+### Step 3f: Rename Files [AUTO]
+Run `git config core.ignorecase false`, then `npm run renameFiles`.
+
+## CHECKPOINT C: Inspect Renamed Files [MANUAL]
+
+Pause and instruct the engineer to:
+
+1. Check the whole directory for underscore folder duplicates (e.g., `folder_1` vs `folder-1`).
+2. If non-md files (.pdf, .json, .jpeg) remain in underscore folders, move them to `src/pages/assets` or `static/`.
+3. Find and replace references to moved files.
+4. Known issue: DEVSITE-1729.
+
+Use `AskQuestion` with options: "Directory looks clean" / "I've fixed issues, continue" / "Need help".
+
+### Step 3g: Reset Git Config & Commit [AUTO]
+After engineer confirms, run `git config --unset core.ignorecase`.
+Commit Phase 3 changes (config.md already committed in Step 3c1) — follow the **Commit Protocol**:
+   - Stage:
+     ```
+     git add redirects.json static/
+     ```
+     Also stage any files modified by `normalizeLinks`, `renameFiles`, or moved by Step 3b (check `git status` for these). If JSON files were moved from `src/pages/`, also `git rm` the old paths.
+   - Show diff, ask engineer for approval, then commit with message: `build redirections, normalize links, rename files`
+
+---
+
+## Phase 4: Lint & Fix [AUTO + CHECKPOINT]
+
+### Step 4a: Run Lint [AUTO]
+Run `npm run lint`. Capture and display the output.
+
+## CHECKPOINT D: Fix Lint Errors [MANUAL / AUTO-ASSIST]
+
+Pause and show the lint results.
+
+Use `AskQuestion` with options: "Try fix automatically - errors only" / "Try fix automatically - errors and warnings" / "I'll fix errors manually" / "Need help with specific errors".
+
+### If engineer selects "Try fix automatically - errors only" or "Try fix automatically - errors and warnings" [AUTO]:
+If "errors only" was selected, only fix lint issues reported as **errors**. If "errors and warnings" was selected, fix both **errors** and **warnings** (e.g., broken links).
+1. For each distinct lint issue type to be fixed, read the corresponding linter rule source file from `https://github.com/AdobeDocs/adp-devsite-utils/tree/main/linters` (or the local copy at `../adp-devsite-utils/linters/` if available) to understand what the rule checks and what the fix should be.
+2. Apply fixes to the affected `.md` files under `src/pages/` based on the rule logic:
+   - **`no-html-comments`**: Escape HTML comments by adding `\` before `<!--` and `-->` (e.g., `<!-- comment -->` → `\<!-- comment --\>`) so the comment text remains visible on the page.
+   - **`no-html-tags`**: Escape HTML tags with `\` (e.g., `<br/>` → `\<br/\>`).
+   - **`no-details-html`**: Flag `<details>` HTML for manual conversion to `Details` EDS block.
+   - **`internal-link-extension`**: Fix internal links to use correct extensions.
+   - **`anchor-link-extension`**: Fix anchor links to use correct format.
+   - **`no-angle-brackets`**: Remove or escape angle brackets around URLs.
+   - **`self-close-component`**: Ensure JSX components are self-closed properly.
+   - **`no-unescaped-opening-curly-braces`**: Escape `{` with `\{` when not inside code blocks.
+   - **`no-code-in-table`**: Flag code blocks inside tables for engineer review.
+   - **`no-br-in-tables`**: Remove `<br>` tags from tables.
+   - **`no-block-in-list`**: Flag EDS blocks nested inside list items for engineer review.
+   - **`big-image`**: Flag oversized images for engineer review.
+   - **`no-alt-text-for-image`**: Add placeholder alt text or flag for engineer review.
+   - **`check-frontmatter`**: Fix frontmatter formatting issues.
+   - **`no-kebab-in-filename`**: Flag files with kebab-case names (renaming requires engineer confirmation).
+   - For any other errors, read the rule source to determine the fix.
+3. After applying fixes, re-run `npm run lint` and display the updated results.
+4. If errors remain, report them and ask the engineer:
+   Use `AskQuestion` with options: "I'll fix remaining errors manually" / "Try fix again" / "Need help".
+
+### If engineer selects "I'll fix errors manually" [MANUAL]:
+Instruct the engineer:
+1. **HTML comments error**: Replace HTML comments with markdown comments, or escape HTML tags with `\` (e.g., `<br/>` becomes `\<br/\>`).
+2. **Hidden table cell error**: Ask content team about inconsistent column counts.
+3. Fix any other errors or broken links.
+4. Reference: https://github.com/AdobeDocs/adp-devsite-utils/blob/main/README.md#linting
+
+Use `AskQuestion` with options: "All lint issues resolved" / "Need help with specific errors".
+
+### Step 4b: Commit Lint Fixes [AUTO]
+After lint issues are resolved (either automatically or manually) — follow the **Commit Protocol**:
+   - Stage:
+     ```
+     git add -u src/pages/
+     ```
+   - Show diff, ask engineer for approval, then commit with message: `resolve lint errors`
+
+---
+
+## Phase 4c: Replace Deprecated Blocks [AUTO]
+
+Follow the replacement mappings defined in the [Block Replacements best practices](https://github.com/AdobeDocs/dev-docs-reference/blob/main/src/pages/getting-started/dev-docs/best-practices/index.md).
+
+1. Search all `.md` files under `src/pages/` for deprecated block names.
+2. **Preserve escaped comments** — when processing files, never modify already-escaped HTML comments (`\<!-- ... --\>`). These were intentionally escaped during Phase 4 linting and must remain unchanged.
+3. **Safe replacements** — perform automatically:
+   - `Teaser` → `Announcement`
+   - `DCSummary` → `Summary`
+   - `ResourceCard` → `InfoCard`
+   - `AnnouncementBlock` → `Announcement`
+   - `Hero` → `Superhero` (preserve variant: default→default, halfwidth→halfWidth, fullwidth→centered)
+   - `Media` → `Embed` (also remove angle brackets `< >` around URLs)
+   - `InlineAlert`: replace `header` slot with `heading` slot
+   - `---` / `* * *` / `<hr>` → `<HorizontalLine />`
+4. **Flag for engineer review** — do NOT auto-replace, report locations:
+   - `TextBlock` (could become `Cards` or `Columns` depending on context)
+   - `openAPISpec` → `RedoclyAPIBlock` (requires path construction with `{PATH_PREFIX}`)
+   - `<details>` HTML → `Details` EDS block (structural change)
+5. Report a summary: number of files changed, replacements made, and any items flagged for manual review.
+6. If any items were flagged, use `AskQuestion` with options: "I've handled the flagged items" / "No flagged items" / "Need help". Otherwise skip ahead.
+7. Commit block replacements — follow the **Commit Protocol**:
+   - Stage:
+     ```
+     git add -u src/pages/
+     ```
+   - Show diff, ask engineer for approval, then commit with message: `replace deprecated blocks`
+   - Skip this commit if no deprecated blocks were found.
+
+---
+
+## Phase: Local Dev Review [AUTO + CHECKPOINT]
+
+This phase starts the full local dev environment so the engineer can visually review all changes before committing.
+
+### Step: Start Dev Servers [AUTO]
+
+Start **3 dev servers in parallel** using backgrounded shell commands (`block_until_ms: 0`), each in its own terminal:
+
+1. **Content repo** (port 3003): Run `npm run dev` in the content repo root (`{REPO_NAME}`).
+2. **Runtime connector** (port 3002): Run `npm run dev` in `../devsite-runtime-connector`.
+3. **ADP devsite** (port 3000 + 3001): Run `npm run dev` in `../adp-devsite`. This starts both the AEM CLI on port 3001 and the markup server on port 3000 via `concurrently`.
+
+Wait a few seconds for all servers to start, then open a browser to: `http://localhost:3000/{PATH_PREFIX}`
+
+## CHECKPOINT: Local Dev Review [MANUAL]
+
+Pause and instruct the engineer to:
+
+1. Review the site at `http://localhost:3000/{PATH_PREFIX}` in the browser.
+2. Navigate through all pages and verify rendering.
+3. Check that navigation, links, and images work correctly.
+4. If issues are found, fix them before proceeding.
+
+Use `AskQuestion` with options: "Site looks good" / "Found issues (fixing)" / "Need help".
+
+If the engineer found and fixed issues during review — follow the **Commit Protocol**:
+   - Stage:
+     ```
+     git add -u
+     ```
+   - Show diff, ask engineer for approval, then commit with message: `address issues found during local dev review`
+
+After the engineer approves, stop the 3 dev servers (kill the backgrounded processes).
+
+---
+
+## Phase 5: Stage Deployment [AUTO + CHECKPOINTS]
+
+### Step 5a: Temporarily Update deploy.yml [AUTO]
+Edit `.github/workflows/deploy.yml`: in the `inputs.env.option` field, change the first option`"prod"` to `"stage"`.
+This is a workaround because `staging.yml` is missing from the Gatsby-based main branch.
+Commit the change — follow the **Commit Protocol**:
+   - Stage:
+     ```
+     git add .github/workflows/deploy.yml
+     ```
+   - Show diff, ask engineer for approval, then commit with message: `temporarily set deploy.yml to staging environment`
+
+## CHECKPOINT F: Deploy & Verify [MANUAL]
+
+Pause and instruct the engineer to:
+
+1. Follow deployment instructions: https://github.com/AdobeDocs/adp-devsite-utils/blob/main/README.md#deployment
+2. Trigger the GitHub Actions deploy workflow.
+3. Check the action logs for errors (the status may show green even with errors -- drill into logs).
+4. Work through any deployment errors.
+
+Use `AskQuestion` with options: "Deployment successful" / "Working through errors" / "Need help".
+
+---
+
+## CHECKPOINT G: Fastly Stage Setup & Visual Comparison [MANUAL]
+
+First, instruct the engineer to set up the necessary environment variables for Fastly Redirects by following: https://github.com/AdobeDocs/adp-devsite-utils/blob/main/README.md#fastly-redirects-script
+
+Use `AskQuestion` with options: ".env ready for Fastly Redirects" / "Need help". Only proceed when engineer confirms.
+
+Then instruct the engineer to:
+
+1. If staging deployment looks OK at `https://stage--adp-devsite-stage--adobedocs.aem.page/{PATH_PREFIX}`:
+   Update Fastly by removing entry from `azureblob_transclusion_table` and adding to `adp_docs_table`.
+2. Compare stage EDS (`developer-stage.adobe.com/{PATH_PREFIX}`) with prod Gatsby (`developer.adobe.com/{PATH_PREFIX}`) for rendering differences.
+
+Use `AskQuestion` with options: "Stage looks good, Fastly updated" / "Found rendering issues" / "Need help".
+
+---
+
+## Phase 6: Stage Redirects [AUTO + CHECKPOINT]
+
+### Step 6a: Add Stage Redirects [AUTO]
+Run: `npx --yes github:AdobeDocs/adp-devsite-utils fastlyRedirects stage --verbose`
+
+### Step 6b: Verify Stage Redirects [AUTO]
+Run: `npm run redirectCheck:stage`
+Display results.
+
+## CHECKPOINT H: Repo Owner Stage Review [MANUAL]
+
+Pause and instruct the engineer to:
+
+1. Ask the repo owner to check the stage site.
+2. Add to the ticket: "passed over to {owner} for verification".
+3. List any outstanding issues in the ticket.
+
+Use `AskQuestion` with options: "Owner approved stage" / "Owner found issues (will fix)" / "Waiting for owner".
+
+---
+
+## Phase 7: Cleanup Gatsby Files [AUTO]
+
+Delete the following Gatsby-related files and folders (if they exist):
+
+- `gatsby-config.js`
+- `yarn.lock`
+- `.yarnrc.yml`
+- `.markdownlint.yml` (root level, if any)
+- `.yarn/` directory
+- `.github/linters/` directory
+- `.github/scripts/` directory (if exists)
+- `.github/dependabot.yml`
+- `.github/workflows/test-pull-request.yml`
+- `.github/workflows/github-pages.yml`
+
+Replace `README.md` content with the template from:
+`https://raw.githubusercontent.com/AdobeDocs/dev-docs-template/main/README.md`
+
+Revert `.github/workflows/deploy.yml` back to the template version (undo the staging workaround from Phase 5).
+Download fresh copy from: `https://raw.githubusercontent.com/AdobeDocs/dev-docs-template/main/.github/workflows/deploy.yml`
+
+Commit the cleanup — follow the **Commit Protocol**:
+   - Stage:
+     ```
+     git rm --ignore-unmatch gatsby-config.js yarn.lock .yarnrc.yml .markdownlint.yml .github/dependabot.yml \
+       .github/workflows/test-pull-request.yml .github/workflows/github-pages.yml
+     git rm -rf --ignore-unmatch .yarn/ .github/linters/ .github/scripts/
+     git add README.md .github/workflows/deploy.yml
+     ```
+   - Show diff, ask engineer for approval, then commit with message: `cleanup Gatsby files, revert deploy.yml, and update README`
+
+---
+
+## CHECKPOINT I: Merge to Main [MANUAL]
+
+Pause and instruct the engineer to:
+
+1. Create a PR and ask a **peer** (not the code owner) to review.
+2. Look out for custom workflows and notify Dawn and Pat about them.
+3. Merge to main when approved, then deploy to prod (with **DeployAll** option). **Prod only looks at main branch.**
+
+Use `AskQuestion` with options: "Merged to main" / "PR under review" / "Need help".
+
+---
+
+## CHECKPOINT J: Test & Wait for Prod Go Signal [MANUAL]
+
+Pause and instruct the engineer to:
+
+1. Test on `https://main--adp-devsite--adobedocs.aem.live/{PATH_PREFIX}`
+2. **Do NOT proceed until the customer gives the go signal that pages look good.**
+
+Use `AskQuestion` with options: "Customer approved, ready for prod" / "Still waiting for approval".
+
+---
+
+## Phase 9: Prod Redirects [AUTO]
+
+### Step 9a: Add Prod Redirects [AUTO]
+**WARNING: This will overwrite Gatsby pages and redirects visible to the general audience.**
+Run: `npx --yes github:AdobeDocs/adp-devsite-utils fastlyRedirects prod --verbose`
+
+## CHECKPOINT K: Fastly Prod Setup [MANUAL]
+
+Pause and instruct the engineer to:
+
+1. Verify EDS prod is working at `https://main--adp-devsite--adobedocs.aem.live/{PATH_PREFIX}`
+2. Update Fastly: remove entry from `azureblob_transclusion_table`, add to `adp_docs_table`.
+3. **Rollback plan**: If anything goes wrong, add back the `azureblob_transclusion_table` entry and remove the `adp_docs_table` entry to roll back to Gatsby.
+
+Use `AskQuestion` with options: "Fastly prod updated" / "Need to rollback" / "Need help".
+
+---
+
+## Phase 10: Final Verification [AUTO + CHECKPOINT]
+
+### Step 10a: Verify Prod Redirects [AUTO]
+Run: `npm run redirectCheck:prod`
+Display results.
+
+## CHECKPOINT L: Final Checks [MANUAL]
+
+Pause and instruct the engineer to:
+
+1. Test on `developer.adobe.com/{PATH_PREFIX}`.
+2. Check GitHub repo branch protection settings (Settings -> Branches -> rule for main).
+   If Gatsby left over a "validate" required check, replace it with "lint".
+3. Update the **Developer Website Map**:
+   - 'UP TO DATE Devsite Map' tab
+   - Column N onwards in 'DevDocs Migration' tab
+4. **Add the conversion date** -- it determines inclusion in Dawn's redirect removal sessions (every 6 weeks).
+5. Review other considerations:
+   - Search indexing
+   - Custom components (resolve case by case)
+   - File upload errors
+   - Redirect issues (may need Fastly-level redirects)
+   - Get credentials / contributor info not yet supported
+   - Private sites must convert to public AdobeDocs org
+
+Use `AskQuestion` with options: "All final checks done" / "Outstanding items remain".
+
+When the engineer confirms all checks are done, mark all todos as completed and congratulate them on a successful conversion.
+
+---
+
+## TodoWrite Schema
+
+When initializing, create todos with these IDs:
+
+| ID | Content | Initial Status |
+|----|---------|----------------|
+| `phase1` | Phase 1: Branch & Config Verification | `in_progress` |
+| `checkpoint-a` | CHECKPOINT A: Google Sheets Setup | `pending` |
+| `phase2` | Phase 2: Copy Template Files | `pending` |
+| `phase3` | Phase 3: Content Management (buildNav, redirections, normalize, rename) | `pending` |
+| `checkpoint-b` | CHECKPOINT B: Review config.md | `pending` |
+| `checkpoint-c` | CHECKPOINT C: Inspect Renamed Files | `pending` |
+| `phase4` | Phase 4: Lint & Fix | `pending` |
+| `checkpoint-d` | CHECKPOINT D: Fix Lint Errors | `pending` |
+| `phase4c` | Phase 4c: Replace Deprecated Blocks | `pending` |
+| `local-dev` | Phase: Run Local Dev (3 parallel servers) | `pending` |
+| `checkpoint-local` | CHECKPOINT: Local Dev Review | `pending` |
+| `phase5` | Phase 5: Stage Deployment (update deploy.yml) | `pending` |
+| `checkpoint-f` | CHECKPOINT F: Deploy & Verify via GitHub Actions | `pending` |
+| `checkpoint-g` | CHECKPOINT G: Fastly Stage Setup & Visual Comparison | `pending` |
+| `phase6` | Phase 6: Stage Redirects | `pending` |
+| `checkpoint-h` | CHECKPOINT H: Repo Owner Stage Review | `pending` |
+| `phase7` | Phase 7: Cleanup Gatsby Files & Revert deploy.yml | `pending` |
+| `checkpoint-i` | CHECKPOINT I: Merge to Main | `pending` |
+| `checkpoint-j` | CHECKPOINT J: Test & Wait for Prod Go Signal | `pending` |
+| `phase9` | Phase 9: Prod Redirects | `pending` |
+| `checkpoint-k` | CHECKPOINT K: Fastly Prod Setup | `pending` |
+| `phase10` | Phase 10: Final Verification | `pending` |
+| `checkpoint-l` | CHECKPOINT L: Final Checks & Documentation | `pending` |
