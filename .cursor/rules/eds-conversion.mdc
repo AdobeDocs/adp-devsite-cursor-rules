@@ -8,7 +8,8 @@ alwaysApply: true
 This rule orchestrates the conversion of **any content repo** in this directory from Gatsby to EDS.
 Activate with: **"@\<repo-name\> start eds conversion"** or **"@\<repo-name\> continue eds conversion"**.
 
-**Source**: Last updated referring to [Gatsby-to-EDS conversion wiki as of **2026-03-16**](https://wiki.corp.adobe.com/spaces/AdobeCloudPlatform/pages/3547041099/Converting+and+Onboarding+to+EDS).
+**Source**: Last updated on 2026-03-2 referring to [Gatsby-to-EDS conversion wiki as of **2026-03-16**](https://wiki.corp.adobe.com/spaces/AdobeCloudPlatform/pages/3547041099/Converting+and+Onboarding+to+EDS).
+
 
 ## Repo Details
 
@@ -167,7 +168,7 @@ Use `AskQuestion` with options: "Try fix automatically - errors only" / "Try fix
 
 ### If engineer selects "Try fix automatically - errors only" or "Try fix automatically - errors and warnings" [AUTO]:
 If "errors only" was selected, only fix lint issues reported as **errors**. If "errors and warnings" was selected, fix both **errors** and **warnings** (e.g., broken links).
-1. For each distinct lint issue type to be fixed, read the corresponding linter rule source file from `https://github.com/AdobeDocs/adp-devsite-utils/tree/main/linters` (or the local copy at `../adp-devsite-utils/linters/` if available) to understand what the rule checks and what the fix should be.
+1. For each distinct lint issue type to be fixed, read the corresponding linter rule source file from `https://github.com/AdobeDocs/adp-devsite-utils/tree/main/linters` (or the local copy at `../adp-devsite-utils/linters/` if available) to understand what the rule checks and what the fix should be. Also refer to the [Block Usage Best Practices](https://github.com/AdobeDocs/dev-docs-reference/blob/main/src/pages/getting-started/dev-docs/best-practices/index.md) for correct block syntax, markdown rules, path conventions, and replacement mappings when applying fixes.
 2. Apply fixes to the affected `.md` files under `src/pages/` based on the rule logic:
    - **`no-html-comments`**: Escape HTML comments by adding `\` before `<!--` and `-->` (e.g., `<!-- comment -->` → `\<!-- comment --\>`) so the comment text remains visible on the page.
    - **`no-html-tags`**: Escape HTML tags with `\` (e.g., `<br/>` → `\<br/\>`).
@@ -195,6 +196,7 @@ Instruct the engineer:
 2. **Hidden table cell error**: Ask content team about inconsistent column counts.
 3. Fix any other errors or broken links.
 4. Reference: https://github.com/AdobeDocs/adp-devsite-utils/blob/main/README.md#linting
+5. For block syntax, markdown rules, and path conventions, refer to: [Block Usage Best Practices](https://github.com/AdobeDocs/dev-docs-reference/blob/main/src/pages/getting-started/dev-docs/best-practices/index.md)
 
 Use `AskQuestion` with options: "All lint issues resolved" / "Need help with specific errors".
 
