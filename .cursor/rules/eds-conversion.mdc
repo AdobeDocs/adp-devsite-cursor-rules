@@ -163,11 +163,15 @@ Run `npm run lint`. Capture and display the output.
 
 Pause and show the lint results.
 
-Use `AskQuestion` with options: "Try fix automatically - errors only" / "Try fix automatically - errors and warnings" / "I'll fix errors manually" / "Need help with specific errors".
+Use `AskQuestion` with options: "Try fix automatically - errors only" / "Try fix automatically - errors and metadata warnings" / "Try fix automatically - errors and warnings" / "I'll fix errors manually" / "Need help with specific errors".
 
-### If engineer selects "Try fix automatically - errors only" or "Try fix automatically - errors and warnings" [AUTO]:
-If "errors only" was selected, only fix lint issues reported as **errors**. If "errors and warnings" was selected, fix both **errors** and **warnings** (e.g., broken links).
-1. For each distinct lint issue type to be fixed, read the corresponding linter rule source file from `https://github.com/AdobeDocs/adp-devsite-utils/tree/main/linters` (or the local copy at `../adp-devsite-utils/linters/` if available) to understand what the rule checks and what the fix should be.
+### If engineer selects "Try fix automatically - errors only", "Try fix automatically - errors and metadata warnings", or "Try fix automatically - errors and warnings" [AUTO]:
+Determine the fix scope based on the selected option:
+- **"errors only"**: Fix only lint issues reported as **errors**.
+- **"errors and metadata warnings"**: Fix all **errors**, plus **warnings** from the `check-frontmatter` rule related to missing or empty `title` and `description` fields in frontmatter. To fix these, read the `check-frontmatter` linter rule source to understand what metadata fields are required, then add missing `title` and/or `description` to each flagged file's YAML frontmatter. Derive sensible values from the page's first heading (`# ...`) for `title` and from the opening paragraph for `description`. If no suitable content exists, use the filename (converted from kebab-case to title case) for `title` and a generic description like `"Overview of {title}"`.
+- **"errors and warnings"**: Fix both **errors** and all **warnings** (e.g., broken links, metadata issues).
+
+1. For each distinct lint issue type to be fixed, read the corresponding linter rule source file from `https://github.com/AdobeDocs/adp-devsite-utils/tree/main/linters` (or the local copy at `../adp-devsite-utils/linters/` if available) to understand what the rule checks and what the fix should be. Also refer to the [Block Usage Best Practices](https://github.com/AdobeDocs/dev-docs-reference/blob/main/src/pages/getting-started/dev-docs/best-practices/index.md) for correct block syntax, markdown rules, path conventions, and replacement mappings when applying fixes.
 2. Apply fixes to the affected `.md` files under `src/pages/` based on the rule logic:
    - **`no-html-comments`**: Escape HTML comments by adding `\` before `<!--` and `-->` (e.g., `<!-- comment -->` → `\<!-- comment --\>`) so the comment text remains visible on the page.
    - **`no-html-tags`**: Escape HTML tags with `\` (e.g., `<br/>` → `\<br/\>`).
