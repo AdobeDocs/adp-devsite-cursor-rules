@@ -75,7 +75,7 @@ Use `AskQuestion` with options: "Completed" / "Skip (already done)" / "Need help
    - **Do not add, remove, or change the `.gitignore` file in this phase.**
 2. Download and replace workflow files in `.github/workflows/`:
    - `build-auto-generated-files.yml` from `https://raw.githubusercontent.com/AdobeDocs/dev-docs-template/main/.github/workflows/build-auto-generated-files.yml`
-     This workflow auto-generates `src/pages/contributors.json` and `src/pages/adp-site-metadata.json` on every PR via CI. These files are also generated locally by `npm run dev` at startup (via `dev.js`). The engineer does NOT need to create or commit these files manually during conversion — they will be auto-committed to the PR branch when the eds-migration PR is created at CHECKPOINT I. If they appear as untracked files in `git status` after running local dev, they can be ignored.
+     This workflow auto-generates `src/pages/contributors.json` and `src/pages/adp-site-metadata.json` on every PR via CI. These files are also generated locally by `npm run dev` at startup (via `dev.js`). They will be committed after the Local Dev Review phase verifies the site works correctly.
    - `deploy.yml` from `https://raw.githubusercontent.com/AdobeDocs/dev-docs-template/main/.github/workflows/deploy.yml`
    - `stage.yml` from `https://raw.githubusercontent.com/AdobeDocs/dev-docs-template/main/.github/workflows/stage.yml`
    - `lint.yml` from `https://raw.githubusercontent.com/AdobeDocs/dev-docs-template/main/.github/workflows/lint.yml`
@@ -276,6 +276,14 @@ If the engineer found and fixed issues during review — follow the **Commit Pro
    - Show diff, ask engineer for approval, then commit with message: `address issues found during local dev review`
 
 After the engineer approves, stop the 3 dev servers (kill the backgrounded processes).
+
+### Step: Commit Auto-Generated Files [AUTO]
+Running `npm run dev` generates `src/pages/contributors.json` and `src/pages/adp-site-metadata.json`. After the Local Dev Review is complete and the site is verified, commit these files — follow the **Commit Protocol**:
+   - Stage:
+     ```
+     git add src/pages/contributors.json src/pages/adp-site-metadata.json
+     ```
+   - Show diff, ask engineer for approval, then commit with message: `add auto-generated contributors.json and adp-site-metadata.json`
 
 ---
 
