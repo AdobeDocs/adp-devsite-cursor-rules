@@ -8,7 +8,8 @@ alwaysApply: true
 This rule orchestrates the conversion of **any content repo** in this directory from Gatsby to EDS.
 Activate with: **"@\<repo-name\> start eds conversion"** or **"@\<repo-name\> continue eds conversion"**.
 
-**Source**: Last updated referring to [Gatsby-to-EDS conversion wiki as of **2026-03-16**](https://wiki.corp.adobe.com/spaces/AdobeCloudPlatform/pages/3547041099/Converting+and+Onboarding+to+EDS).
+**Source**: Last updated on 2026-03-2 referring to [Gatsby-to-EDS conversion wiki as of **2026-03-16**](https://wiki.corp.adobe.com/spaces/AdobeCloudPlatform/pages/3547041099/Converting+and+Onboarding+to+EDS).
+
 
 ## Repo Details
 
@@ -199,6 +200,7 @@ Instruct the engineer:
 2. **Hidden table cell error**: Ask content team about inconsistent column counts.
 3. Fix any other errors or broken links.
 4. Reference: https://github.com/AdobeDocs/adp-devsite-utils/blob/main/README.md#linting
+5. For block syntax, markdown rules, and path conventions, refer to: [Block Usage Best Practices](https://github.com/AdobeDocs/dev-docs-reference/blob/main/src/pages/getting-started/dev-docs/best-practices/index.md)
 
 Use `AskQuestion` with options: "All lint issues resolved" / "Need help with specific errors".
 
