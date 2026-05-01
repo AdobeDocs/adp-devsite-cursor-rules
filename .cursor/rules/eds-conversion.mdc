@@ -191,12 +191,14 @@ Determine the fix scope based on the selected option:
    - **`no-kebab-in-filename`**: Flag files with kebab-case names (renaming requires engineer confirmation).
    - **`no-html-tags` for `<GetCredentialOAuthS2s*>`**: When the linter flags a Gatsby `GetCredential` component import+usage pattern (`import ... from '.../GetCredentialOAuthS2s*.js'` + `<GetCredentialOAuthS2s* />`), convert it to the EDS `<GetCredentialOAuthS2s />` block:
      1. Read the referenced `.js` file (typically under `src/pages/credential/` or `src/pages/components/credentials/`) to extract the React component configuration.
-     2. Create `src/pages/credential/getcredential.json` following the EDS JSON schema: `{ "total": 1, "offset": 0, "limit": 1, "data": [{ "GetCredential": { ... } }], ":type": "sheet" }`. Reference example: [ffs-s3d-api getcredential.json](https://github.com/AdobeDocs/ffs-s3d-api/blob/main/src/pages/credential/getcredential.json).
+     2. Create `src/pages/credential/getcredential.json` following the EDS JSON schema: `{ "total": 1, "offset": 0, "limit": 1, "data": [{ "GetCredential": { ... } }], ":type": "sheet" }`.
      3. Map top-level props (`className`, `templateId`, `productName`) and each sub-component (`SignIn`, `Form`, `Card`, `Return`, `RequestAccess`, `UnknownError`) to nested JSON objects under `"components"`.
      4. Replace `icon={varName}` (imported from local image files) with raw GitHub URLs: `https://raw.githubusercontent.com/AdobeDocs/{REPO_NAME}/main/src/pages/credential/images/<filename>`.
      5. Convert JSX `Side` content (`<div>`, `<h3>`, `<p>`, `<a>`) into `"content": { "style": {...}, "elements": [{ "type": "h3", "className": "...", "text": "..." }, ...] }` arrays.
      6. Simplify JSX fragment headings (e.g., `heading={(<>Title<br/>...<small>description</small>...</>)}`) by extracting the title into `"heading"` and the descriptive text into `"description"` as plain strings.
      7. In the `.md` file, remove the `import` line and replace the component tag (e.g., `<GetCredentialOAuthS2s />`) with `<GetCredential />`.
+     Reference — before (Gatsby): [index.md](https://github.com/AdobeDocs/ffs-s3d-api/blob/gatsby-backup-main/src/pages/api/index.md?plain=1), [GetCredentialOAuth2.js](https://github.com/AdobeDocs/ffs-s3d-api/blob/gatsby-backup-main/src/pages/components/credentials/GetCredentialOAuth2.js).
+     Reference — after (EDS): [index.md](https://github.com/AdobeDocs/ffs-s3d-api/blob/main/src/pages/api/index.md?plain=1), [getcredential.json](https://github.com/AdobeDocs/ffs-s3d-api/blob/main/src/pages/credential/getcredential.json).
    - For any other errors, read the rule source to determine the fix.
 3. After applying fixes, re-run `npm run lint` and display the updated results.
 4. If errors remain, report them and ask the engineer:
