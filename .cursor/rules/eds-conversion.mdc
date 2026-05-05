@@ -175,7 +175,7 @@ Determine the fix scope based on the selected option:
 1. For each distinct lint issue type to be fixed, read the corresponding linter rule source file from `https://github.com/AdobeDocs/adp-devsite-utils/tree/main/linters` (or the local copy at `../adp-devsite-utils/linters/` if available) to understand what the rule checks and what the fix should be. Also refer to the [Block Usage Best Practices](https://github.com/AdobeDocs/dev-docs-reference/blob/main/src/pages/getting-started/dev-docs/best-practices/index.md) for correct block syntax, markdown rules, path conventions, and replacement mappings when applying fixes.
 2. Apply fixes to the affected `.md` files under `src/pages/` based on the rule logic:
    - **`no-html-comments`**: Escape HTML comments by adding `\` before `<!--` and `-->` (e.g., `<!-- comment -->` → `\<!-- comment --\>`) so the comment text remains visible on the page.
-   - **`no-html-tags`**: Escape HTML tags with `\` (e.g., `<br/>` → `\<br/\>`).
+   - **`no-html-tags`**: Escape HTML tags with `\` (e.g., `<br/>` → `\<br/\>`). Exception: when a `<table>...</table>` block is encountered, convert it to a native markdown table instead of escaping (escaped tables render as ugly text). Parse the `<tr>`/`<th>`/`<td>` structure and emit pipe-separated markdown rows. Drop attributes like `columnWidths` (markdown tables don't support them); escape pipe characters `|` inside cell content as `\|`; collapse cell newlines to spaces.
    - **`no-details-html`**: Flag `<details>` HTML for manual conversion to `Details` EDS block.
    - **`internal-link-extension`**: Fix internal links to use correct extensions.
    - **`anchor-link-extension`**: Fix anchor links to use correct format.
@@ -238,7 +238,7 @@ Follow the replacement mappings defined in the [Block Replacements best practice
    - `Hero` → `Superhero` (preserve variant: default→default, halfwidth→halfWidth, fullwidth→centered)
    - `Media` → `Embed` (also remove angle brackets `< >` around URLs)
    - `InlineAlert`: replace `header` slot with `heading` slot
-   - `---` / `* * *` / `<hr>` → `<HorizontalLine />`
+   - `---` / `* * *` / `___` (three or more underscores) / `<hr>` → `<HorizontalLine />` (skip lines inside YAML frontmatter and code fences)
 4. **Flag for engineer review** — do NOT auto-replace, report locations:
    - `TextBlock` (could become `Cards` or `Columns` depending on context)
    - `openAPISpec` → `RedoclyAPIBlock` (requires path construction with `{PATH_PREFIX}`)
@@ -252,6 +252,31 @@ Follow the replacement mappings defined in the [Block Replacements best practice
      ```
    - Show diff, ask engineer for approval, then commit with message: `replace deprecated blocks`
    - Skip this commit if no deprecated blocks were found.
+
+---
+
+## Phase 4d: Wrap Bare URLs [AUTO]
+
+Plain URLs in markdown (e.g., `**See**: https://developer.mozilla.org/...`) do not render as clickable links in EDS — they appear as static text. Convert them to `[URL](URL)` form so the URL becomes both the visible label and the link target.
+
+1. Scan all `.md` files under `src/pages/` (skip YAML frontmatter, fenced code blocks, and inline `` ` `` code spans).
+2. Find every `http://` / `https://` URL that is **bare** — meaning it is **not** already:
+   - The target of a markdown link: `[text](URL)` (URL preceded by `(`)
+   - The label of a markdown link: `[URL](...)` (URL preceded by `[` and followed by `](`)
+   - Wrapped in an autolink: `<URL>` (URL preceded by `<`)
+3. URL boundary handling:
+   - URL chars: any char except whitespace, `<`, `>`, `"`, `'`, `\`, `)`, `]`.
+   - Strip trailing sentence punctuation (`.`, `,`, `;`, `:`, `!`, `?`) — keep them outside the link.
+   - Preserve URLs that contain balanced parentheses (e.g., MDN's `WebSocket#close()`).
+4. Replace each bare URL `https://example.com/foo` with `[https://example.com/foo](https://example.com/foo)`.
+5. Report a summary: number of files changed and total URLs wrapped.
+6. Commit the changes — follow the **Commit Protocol**:
+   - Stage:
+     ```
+     git add -u src/pages/
+     ```
+   - Show diff, ask engineer for approval, then commit with message: `wrap bare URLs as markdown links`
+   - Skip this commit if no bare URLs were found.
 
 ---
 
@@ -481,6 +506,7 @@ When initializing, create todos with these IDs:
 | `phase4` | Phase 4: Lint & Fix | `pending` |
 | `checkpoint-d` | CHECKPOINT D: Fix Lint Errors | `pending` |
 | `phase4c` | Phase 4c: Replace Deprecated Blocks | `pending` |
+| `phase4d` | Phase 4d: Wrap Bare URLs | `pending` |
 | `local-dev` | Phase: Run Local Dev (3 parallel servers) | `pending` |
 | `checkpoint-local` | CHECKPOINT: Local Dev Review | `pending` |
 | `phase5` | Phase 5: Stage Deployment (update deploy.yml) | `pending` |
