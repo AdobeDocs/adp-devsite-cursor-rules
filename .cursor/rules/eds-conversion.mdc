@@ -8,8 +8,6 @@ alwaysApply: true
 This rule orchestrates the conversion of **any content repo** in this directory from Gatsby to EDS.
 Activate with: **"@\<repo-name\> start eds conversion"** or **"@\<repo-name\> continue eds conversion"**.
 
-**Source**: Last updated on 2026-03-2 referring to [Gatsby-to-EDS conversion wiki as of **2026-03-16**](https://wiki.corp.adobe.com/spaces/AdobeCloudPlatform/pages/3547041099/Converting+and+Onboarding+to+EDS).
-
 
 ## Repo Details
 
@@ -78,15 +76,17 @@ Use `AskQuestion` with options: "Completed" / "Skip (already done)" / "Need help
    - `build-auto-generated-files.yml` from `https://raw.githubusercontent.com/AdobeDocs/dev-docs-template/main/.github/workflows/build-auto-generated-files.yml`
      This workflow auto-generates `src/pages/contributors.json` and `src/pages/adp-site-metadata.json` on every PR via CI. These files are also generated locally by `npm run dev` at startup (via `dev.js`). They will be committed after the Local Dev Review phase verifies the site works correctly.
    - `deploy.yml` from `https://raw.githubusercontent.com/AdobeDocs/dev-docs-template/main/.github/workflows/deploy.yml`
-   - `stage.yml` from `https://raw.githubusercontent.com/AdobeDocs/dev-docs-template/main/.github/workflows/stage.yml`
    - `lint.yml` from `https://raw.githubusercontent.com/AdobeDocs/dev-docs-template/main/.github/workflows/lint.yml`
+   - `post-lint-comment.yml` from `https://raw.githubusercontent.com/AdobeDocs/dev-docs-template/main/.github/workflows/post-lint-comment.yml`
+   - `stage.yml` from `https://raw.githubusercontent.com/AdobeDocs/dev-docs-template/main/.github/workflows/stage.yml`
    - Delete old workflows: `github-pages.yml`, `test-pull-request.yml`.
 3. Run `npm install` to install new dependencies.
 4. Commit Phase 2 changes — follow the **Commit Protocol**:
    - Stage:
      ```
      git add package.json \
-       .github/workflows/build-auto-generated-files.yml .github/workflows/deploy.yml .github/workflows/stage.yml .github/workflows/lint.yml
+       .github/workflows/build-auto-generated-files.yml .github/workflows/deploy.yml \
+       .github/workflows/lint.yml .github/workflows/post-lint-comment.yml .github/workflows/stage.yml
      ```
      *Do not stage or modify any `.gitignore` files.*
    - Show diff, ask engineer for approval, then commit with message: `add EDS template files and update package.json`
@@ -327,8 +327,8 @@ Running `npm run dev` generates `src/pages/contributors.json` and `src/pages/adp
 ## Phase 5: Stage Deployment [AUTO + CHECKPOINTS]
 
 ### Step 5a: Temporarily Update deploy.yml [AUTO]
-Edit `.github/workflows/deploy.yml`: in the `inputs.env.option` field, change the first option`"prod"` to `"stage"`.
-This is a workaround because `staging.yml` is missing from the Gatsby-based main branch.
+Edit `.github/workflows/deploy.yml`: in the `inputs.env.options` field, change the first option `"prod"` to `"stage"`.
+This is a workaround because `stage.yml` cannot be triggered from the `eds-migration` branch — GitHub Actions `workflow_dispatch` only surfaces workflows that exist on the default branch. The Gatsby repo's `deploy.yml` on `main` acts as the trigger handle; selecting `eds-migration` in the "Run workflow" UI runs the EDS `deploy.yml` content from that branch. Changing the default to `"stage"` ensures the first triggered deploy goes to staging, not prod.
 Commit the change — follow the **Commit Protocol**:
    - Stage:
      ```
@@ -483,7 +483,7 @@ Pause and instruct the engineer to:
    - File upload errors
    - Redirect issues (may need Fastly-level redirects)
    - Get credentials / contributor info not yet supported
-   - Private sites must convert to public AdobeDocs org
+   - Private sites (i.e. those under the `AdobeDocsPrivate` org) are not yet handled by this conversion workflow
 
 Use `AskQuestion` with options: "All final checks done" / "Outstanding items remain".
 
