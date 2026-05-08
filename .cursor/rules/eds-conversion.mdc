@@ -472,7 +472,8 @@ Pause and instruct the engineer to:
 
 1. Test on `developer.adobe.com/{PATH_PREFIX}`.
 2. Check GitHub repo branch protection settings (Settings -> Branches -> rule for main).
-   If Gatsby left over a "validate" required check, replace it with "lint".
+   - If Gatsby left over a "validate" required check, replace it with "lint".
+   - If branch protection is enabled, add [adp-devsite-app](https://github.com/apps/adp-devsite-app) as a bypass actor (Settings → Branches → edit ruleset → Bypass list) so auto-generated file commits can push to main. See [FAQ](https://developer-stage.adobe.com/dev-docs-reference/faq/#why-are-the-build-contributors-or-build-site-metadata-checks-failing-with-a-push-rejection) for more details.
 3. Update the **Developer Website Map**:
    - 'UP TO DATE Devsite Map' tab
    - Column N onwards in 'DevDocs Migration' tab
