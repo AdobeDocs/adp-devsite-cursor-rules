@@ -235,6 +235,9 @@ Follow the replacement mappings defined in the [Block Replacements best practice
    - `DCSummary` → `Summary`
    - `ResourceCard` → `InfoCard`
    - `AnnouncementBlock` → `Announcement`
+   - `Summary` → `Announcement`
+   - `SummaryBlock` → `Announcement`
+   - `MiniResourceCard` → `Card`
    - `Hero` → `Superhero` (preserve variant: default→default, halfwidth→halfWidth, fullwidth→centered)
    - `Media` → `Embed` (also remove angle brackets `< >` around URLs)
    - `InlineAlert`: replace `header` slot with `heading` slot
