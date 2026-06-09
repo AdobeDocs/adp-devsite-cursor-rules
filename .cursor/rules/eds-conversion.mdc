@@ -330,8 +330,8 @@ Running `npm run dev` generates `src/pages/contributors.json` and `src/pages/adp
 ## Phase 5: Stage Deployment [AUTO + CHECKPOINTS]
 
 ### Step 5a: Temporarily Update deploy.yml [AUTO]
-Edit `.github/workflows/deploy.yml`: in the `inputs.env.options` field, change the first option `"prod"` to `"stage"`.
-This is a workaround because `stage.yml` cannot be triggered from the `eds-migration` branch — GitHub Actions `workflow_dispatch` only surfaces workflows that exist on the default branch. The Gatsby repo's `deploy.yml` on `main` acts as the trigger handle; selecting `eds-migration` in the "Run workflow" UI runs the EDS `deploy.yml` content from that branch. Changing the default to `"stage"` ensures the first triggered deploy goes to staging, not prod.
+Edit `.github/workflows/deploy.yml`: in the `jobs.deployment.with` block, change `env: prod` to `env: stage`.
+This is a workaround because `stage.yml` cannot be triggered from the `eds-migration` branch — GitHub Actions `workflow_dispatch` only surfaces workflows that exist on the default branch. The Gatsby repo's `deploy.yml` on `main` acts as the trigger handle; selecting `eds-migration` in the "Run workflow" UI runs the EDS `deploy.yml` content from that branch. Re-routing the `env` value to `stage` ensures the first triggered deploy goes to staging, not prod, and passes the central `validate-prod-branch` guard in `deploy-v2.yml` (which fails any prod deploy from a non-`main` branch).
 Commit the change — follow the **Commit Protocol**:
    - Stage:
      ```
