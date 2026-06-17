@@ -4,6 +4,38 @@ Generate a Release PR description for the AdobeDocs/adp-devsite repository by co
 
 You are preparing a release for https://github.com/AdobeDocs/adp-devsite. Follow every step below in order.
 
+### Step 0 — Authenticate with GitHub
+
+Before making any `gh` API calls, ensure the CLI is authenticated. Use this priority order:
+
+1. **Check if `gh` is already authenticated:**
+```bash
+gh auth status
+```
+If already logged in, proceed to Step 1.
+
+2. **Check for a `GITHUB_TOKEN` in the environment or `.env` file at the working directory root:**
+```bash
+# Check shell environment first
+echo $GITHUB_TOKEN
+
+# If empty, read from .env in the working directory root
+if [ -f .env ]; then
+  export GITHUB_TOKEN=$(grep -E '^GITHUB_TOKEN=' .env | cut -d= -f2-)
+fi
+```
+
+3. **If a token was found, log in with it:**
+```bash
+gh auth login --with-token <<< "$GITHUB_TOKEN"
+```
+
+4. **If no token is available anywhere**, instruct the user to either:
+   - Run `gh auth login` interactively, or
+   - Add `GITHUB_TOKEN=<token>` to a `.env` file in the working directory root.
+
+Do not proceed to Step 1 until `gh auth status` confirms a successful login.
+
 ### Step 1 — Find the commit range
 
 Run these shell commands via Bash:
@@ -56,7 +88,73 @@ Collect all unique ticket IDs found for each PR (deduplicated, uppercased).
 
 Read the PR title and body. Write a 1–2 sentence neutral description of **what the change does** (not why it was filed). Keep it concise and non-technical enough for a release note audience.
 
-### Step 6 — Compose the Release PR Description
+### Step 6 — Log the release to dev-docs-reference
+
+Using the branch name derived from the release date (same convention as the release file, e.g. `Jun-17-release`), do the following against the `AdobeDocs/dev-docs-reference` repository:
+
+**6a — Create the branch from main:**
+
+```bash
+# Get the current SHA of main
+MAIN_SHA=$(gh api repos/AdobeDocs/dev-docs-reference/git/ref/heads/main --jq '.object.sha')
+
+# Create the release branch
+gh api repos/AdobeDocs/dev-docs-reference/git/refs \
+  --method POST \
+  --field ref="refs/heads/{branch-name}" \
+  --field sha="$MAIN_SHA"
+```
+
+**6b — Fetch the current content of the changelog page:**
+
+```bash
+gh api repos/AdobeDocs/dev-docs-reference/contents/src/pages/eds-release/index.md \
+  --jq '{sha: .sha, content: .content}'
+```
+
+Decode the base64 `content` field to get the current file text.
+
+**6c — Prepend a new release section:**
+
+After any YAML front matter (lines between the opening and closing `---`), insert the following block at the top of the file body:
+
+```
+## {Month} {D}, {YYYY}
+
+{For each PR, one bullet: `- [{title}](https://github.com/AdobeDocs/adp-devsite/pull/{number}) — {1-sentence description}`}
+
+```
+
+Keep all existing content below unchanged.
+
+**6d — Commit the updated file to the branch:**
+
+Base64-encode the new file content, then:
+
+```bash
+gh api repos/AdobeDocs/dev-docs-reference/contents/src/pages/eds-release/index.md \
+  --method PUT \
+  --field message="chore: add {Mon}-{D}-{YYYY} release notes" \
+  --field content="{base64-encoded-new-content}" \
+  --field sha="{file-sha-from-6b}" \
+  --field branch="{branch-name}"
+```
+
+**6e — Open a PR to main and capture the URL:**
+
+```bash
+gh api repos/AdobeDocs/dev-docs-reference/pulls \
+  --method POST \
+  --field title="{Mon} {D} Release Notes" \
+  --field body="Adds release notes for the {Mon} {D} adp-devsite release." \
+  --field head="{branch-name}" \
+  --field base="main" \
+  --jq '.html_url'
+```
+
+Save the returned PR URL — it will be appended to the adp-devsite release description in the next step.
+
+### Step 7 — Compose the Release PR Description
 
 Write the result to a markdown file at the root of the working directory. Name the file using the current date formatted as `Mon-D-release.md` (e.g. `Jun-17-release.md`, `Sep-1-release.md`). Then output the same content to the user.
 
@@ -102,3 +200,7 @@ For each PR (in the same order as the table), output:
 - If any PR has no approver, flag it with a `⚠️ No approver on record` note.
 - If the `gh` API returns an empty list of commits (branches are in sync), output: "No changes — `stage` and `main` are already in sync."
 - If authentication is needed, instruct the user to run `gh auth login` first.
+
+---
+
+**dev-docs-reference PR:** {PR URL from Step 6e}
