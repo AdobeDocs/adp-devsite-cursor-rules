@@ -58,7 +58,9 @@ Read the PR title and body. Write a 1–2 sentence neutral description of **what
 
 ### Step 6 — Compose the Release PR Description
 
-Output the result in the following format. Do not output anything else before the formatted result.
+Write the result to a markdown file at the root of the working directory. Name the file using the current date formatted as `Mon-D-release.md` (e.g. `Jun-17-release.md`, `Sep-1-release.md`). Then output the same content to the user.
+
+Use the following format:
 
 ---
 
