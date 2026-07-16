@@ -75,14 +75,16 @@ gh api repos/AdobeDocs/adp-devsite/pulls/{PR_NUMBER}/reviews \
 
 ### Step 4 — Extract Jira ticket numbers
 
-Search for Jira ticket IDs matching the pattern `DEVSITE-{digits}` (case-insensitive) in:
+Search for Jira ticket IDs matching either of these patterns (case-insensitive) in:
 - The PR title
 - The PR body
-- The head branch name (e.g. `devsite-2195`, `DEVSITE-1996`, `feat/devsite-1269-something` all contain valid ticket IDs)
+- The head branch name (e.g. `devsite-2195`, `DEVSITE-1996`, `feat/devsite-1269-something`, `adpgenai-211`, `fix-adpgenai-204-something` all contain valid ticket IDs)
 
-When extracting from a branch name, apply a case-insensitive match and normalize the result to uppercase (e.g. `devsite-2195` → `DEVSITE-2195`).
+Recognized ticket prefixes: `DEVSITE-{digits}` and `ADPGENAI-{digits}`.
 
-Collect all unique ticket IDs found for each PR (deduplicated, uppercased).
+When extracting from a branch name, apply a case-insensitive match and normalize the result to uppercase (e.g. `devsite-2195` → `DEVSITE-2195`, `adpgenai-211` → `ADPGENAI-211`).
+
+Collect all unique ticket IDs found for each PR (deduplicated, uppercased), regardless of which of the two prefixes they use.
 
 ### Step 5 — Write a short description for each PR
 
@@ -131,7 +133,7 @@ After any YAML front matter (lines between the opening and closing `---`), inser
 Rules:
 - Derive type from the PR title prefix: `feat` → **Feat**, `fix` → **Fix**, anything else (chore, refactor, docs, etc.) → **Fix**.
 - Keep the description short — a phrase, not a full sentence (match the tone of existing entries in the file).
-- If the PR has one or more Jira tickets, append them inline after the description, space-separated: ` [DEVSITE-XXXX](https://jira.corp.adobe.com/browse/DEVSITE-XXXX)`. Multiple tickets go on the same line.
+- If the PR has one or more Jira tickets (from either the `DEVSITE` or `ADPGENAI` prefix), append them inline after the description, space-separated: ` [TICKET-ID](https://jira.corp.adobe.com/browse/TICKET-ID)` (e.g. ` [DEVSITE-2490](https://jira.corp.adobe.com/browse/DEVSITE-2490)` or ` [ADPGENAI-211](https://jira.corp.adobe.com/browse/ADPGENAI-211)`). Multiple tickets go on the same line.
 - If the PR has no Jira ticket, omit the link entirely — do not add a placeholder.
 - Do NOT include PR numbers, PR links, or author names in the bullets.
 }
@@ -209,6 +211,7 @@ For each PR (in the same order as the table), output:
 
 #### [{i}] #{number} — {title}
 
+**PR:** [#{number}](https://github.com/AdobeDocs/adp-devsite/pull/{number})  
 **Jira:** {ticket links or "—"}  
 **Author:** @{author}  
 **Approved by:** @{approvers or "—"}  
@@ -228,3 +231,43 @@ For each PR (in the same order as the table), output:
 ---
 
 **dev-docs-reference PR:** {PR URL from Step 6e}
+
+**adp-devsite Release PR:** {PR URL from Step 8}
+
+### Step 8 — Open the Release PR on adp-devsite
+
+Open the actual `stage` → `main` release PR on `AdobeDocs/adp-devsite`, using the full markdown composed in Step 7 (everything between the `---` right after the title through the end of the Notes section — i.e. the changes table, all per-PR descriptions, and the Notes; do **not** include the trailing `dev-docs-reference PR` / `adp-devsite Release PR` link lines, since those don't exist yet at this point) as the PR body.
+
+Because the body is long, multiline markdown, write it to a temp file first and pass it to `gh api` via `--field body=@/path/to/file` rather than inlining it in a shell argument (inlining risks quoting/escaping breakage).
+
+```bash
+# Write the composed body (table + descriptions + notes) to a temp file
+cat > /tmp/release-pr-body.md << 'BODY_EOF'
+{full markdown from Step 7: table, per-PR descriptions, and Notes section}
+BODY_EOF
+
+# Check for an existing open PR from stage into main
+EXISTING_RELEASE_PR=$(gh api repos/AdobeDocs/adp-devsite/pulls \
+  -f state=open \
+  --jq '[.[] | select(.head.ref == "stage" and .base.ref == "main")] | first | .html_url // empty')
+
+if [ -n "$EXISTING_RELEASE_PR" ]; then
+  echo "Release PR already exists — updating its description: $EXISTING_RELEASE_PR"
+  PR_NUMBER=$(basename "$EXISTING_RELEASE_PR")
+  gh api repos/AdobeDocs/adp-devsite/pulls/$PR_NUMBER \
+    --method PATCH \
+    --field body=@/tmp/release-pr-body.md
+  RELEASE_PR_URL="$EXISTING_RELEASE_PR"
+else
+  RELEASE_PR_URL=$(gh api repos/AdobeDocs/adp-devsite/pulls \
+    --method POST \
+    -f title="Release {M}/{D}/{YY}" \
+    --field body=@/tmp/release-pr-body.md \
+    -f head="stage" \
+    -f base="main" \
+    --jq '.html_url')
+  echo "Release PR created: $RELEASE_PR_URL"
+fi
+```
+
+Save `$RELEASE_PR_URL` and use it as the `{PR URL from Step 8}` value in the Step 7 output (both in the markdown file written to the working directory and in the message shown to the user — update the file/message after the PR is created).
