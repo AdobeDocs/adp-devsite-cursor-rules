@@ -1,36 +1,34 @@
 ---
-description: Generic Gatsby-to-EDS conversion workflow for any repo in this directory. Triggered by "@<repo-name> start eds conversion" or "@<repo-name> continue eds conversion".
-alwaysApply: true
+name: eds-conversion
+description: Converts AdobeDocs content repositories from Gatsby to Edge Delivery Services through a phased workflow with configuration, content, linting, deployment, redirect, and verification checkpoints. Use when asked to start or continue an EDS conversion for a content repository.
+compatibility: Requires Bash, Git, Node.js and npm, network access, and access to the relevant AdobeDocs repositories and deployment services. Some checkpoints require a browser and manual engineer action.
 ---
 
-# Gatsby to EDS Conversion Workflow
+# Gatsby to EDS conversion
 
-This rule orchestrates the conversion of **any content repo** in this directory from Gatsby to EDS.
-Activate with: **"@\<repo-name\> start eds conversion"** or **"@\<repo-name\> continue eds conversion"**.
+Orchestrate the conversion of an AdobeDocs content repository from Gatsby to Edge Delivery Services (EDS).
 
+When invoked with additional user arguments, treat them as context or extra instructions for the conversion. The user must identify the repository by name or path and indicate whether to start or continue the conversion.
 
-## Repo Details
+## Repository details
 
-The user will reference a specific repo folder (e.g., `@adobe-assurance-public-apis`) when invoking the workflow.
-From the referenced folder name, derive the following variables and use them throughout:
+Resolve the repository specified by the user (for example, `adobe-assurance-public-apis`) before starting the workflow. From the repository folder name, derive the following variables and use them throughout:
 
 - **`{REPO_NAME}`**: The folder name the user referenced (e.g., `adobe-assurance-public-apis`).
 - **`{PATH_PREFIX}`**: `/{REPO_NAME}/` (e.g., `/adobe-assurance-public-apis/`). Verify this against `pathPrefix` in `gatsby-config.js` during Phase 1; if they differ, use the value from `gatsby-config.js`.
 - **Template repo**: `https://github.com/AdobeDocs/dev-docs-template/blob/main/`
 - **Conversion guide**: See `conversion.md` in the parent ADP directory for full reference.
 
-**All commands in this workflow MUST be run inside the `{REPO_NAME}` directory** (i.e., set `working_directory` to the repo folder).
+**All commands in this workflow MUST be run inside the `{REPO_NAME}` directory.** Set the shell working directory to the repository before running any command.
 
-## Workflow Instructions
+## Workflow instructions
 
-When the user says "start eds conversion" (with a repo reference), initialize the full checklist with `TodoWrite` using the phases below,
-then begin executing from Phase 1. When the user says "continue eds conversion", read the current todo list
-and resume from the first non-completed phase.
+When the user asks to start an EDS conversion, initialize the full checklist from the schema below using the agent's task-tracking capability when available, then begin at Phase 1. If no task tracker is available, maintain the checklist in the conversation. When the user asks to continue an EDS conversion, inspect the tracked checklist and repository state, then resume from the first incomplete phase. If progress cannot be determined reliably, ask the user which phase to resume.
 
 At each **CHECKPOINT**, you MUST:
 1. Stop all automated work.
-2. Display the checkpoint instructions to the engineer (what needs to be done manually, with relevant links).
-3. Use `AskQuestion` to ask the engineer to confirm completion before proceeding.
+2. Display the checkpoint instructions to the engineer, including required manual actions and relevant links.
+3. Ask the engineer to confirm completion before proceeding.
 
 ### Commit Protocol
 
@@ -38,7 +36,7 @@ Every commit in this workflow MUST follow this protocol:
 
 1. **Stage only conversion-related changed files.** Do NOT stage `yarn.lock`, `node_modules/`, or other non-conversion artifacts. Each commit section specifies which files to stage.
 2. **Show the diff.** Run `git diff --staged` and display the output to the engineer.
-3. **Ask for approval.** Use `AskQuestion` with options: "Looks good, commit" / "Need changes". Do NOT commit until the engineer selects "Looks good, commit". If the engineer selects "Need changes", wait for them to make changes and re-run the protocol from step 1.
+3. **Ask for approval.** Offer the options "Looks good, commit" and "Need changes". Do NOT commit until the engineer selects "Looks good, commit". If the engineer selects "Need changes", wait for them to make changes and re-run the protocol from step 1.
 4. **Commit without co-author.** NEVER add `Co-authored-by` trailers to commit messages. The commit message must contain ONLY the specified message text — no trailers, no signatures, no co-author lines.
 
 ---
@@ -61,7 +59,7 @@ Pause and instruct the engineer to:
    - Prod: https://docs.google.com/spreadsheets/d/1qmy0ma2wmWDIyU1p1tW0a45i5JnbhEAbUOfRb0lv4rE/edit?gid=0#gid=0
    - Publish to EDS if not already existing.
 
-Use `AskQuestion` with options: "Completed" / "Skip (already done)" / "Need help". Only proceed when engineer confirms.
+Ask the engineer to choose "Completed", "Skip (already done)", or "Need help". Only proceed when the engineer confirms.
 
 ---
 
@@ -112,7 +110,7 @@ Pause and instruct the engineer to:
 2. Add back any missing buttons (e.g., Submit Feedback, Console) that `buildNavigation` may have removed.
 3. Make any manual edits needed.
 
-Use `AskQuestion` with options: "config.md looks good" / "I've made edits, continue" / "Need help".
+Ask the engineer to choose "config.md looks good", "I've made edits, continue", or "Need help".
 
 ### Step 3c1: Commit config.md [AUTO]
 After engineer confirms config.md is ready, commit it separately — follow the **Commit Protocol**:
@@ -141,7 +139,7 @@ Pause and instruct the engineer to:
 3. Find and replace references to moved files.
 4. Known issue: DEVSITE-1729.
 
-Use `AskQuestion` with options: "Directory looks clean" / "I've fixed issues, continue" / "Need help".
+Ask the engineer to choose "Directory looks clean", "I've fixed issues, continue", or "Need help".
 
 ### Step 3g: Reset Git Config & Commit [AUTO]
 After engineer confirms, run `git config --unset core.ignorecase`.
@@ -164,7 +162,7 @@ Run `npm run lint`. Capture and display the output.
 
 Pause and show the lint results.
 
-Use `AskQuestion` with options: "Try fix automatically - errors only" / "Try fix automatically - errors and metadata warnings" / "Try fix automatically - errors and warnings" / "I'll fix errors manually" / "Need help with specific errors".
+Ask the engineer to choose "Try fix automatically - errors only", "Try fix automatically - errors and metadata warnings", "Try fix automatically - errors and warnings", "I'll fix errors manually", or "Need help with specific errors".
 
 ### If engineer selects "Try fix automatically - errors only", "Try fix automatically - errors and metadata warnings", or "Try fix automatically - errors and warnings" [AUTO]:
 Determine the fix scope based on the selected option:
@@ -202,7 +200,7 @@ Determine the fix scope based on the selected option:
    - For any other errors, read the rule source to determine the fix.
 3. After applying fixes, re-run `npm run lint` and display the updated results.
 4. If errors remain, report them and ask the engineer:
-   Use `AskQuestion` with options: "I'll fix remaining errors manually" / "Try fix again" / "Need help".
+   Ask the engineer to choose "I'll fix remaining errors manually", "Try fix again", or "Need help".
 
 ### If engineer selects "I'll fix errors manually" [MANUAL]:
 Instruct the engineer:
@@ -212,7 +210,7 @@ Instruct the engineer:
 4. Reference: https://github.com/AdobeDocs/adp-devsite-utils/blob/main/README.md#linting
 5. For block syntax, markdown rules, and path conventions, refer to: [Block Usage Best Practices](https://github.com/AdobeDocs/dev-docs-reference/blob/main/src/pages/getting-started/dev-docs/best-practices/index.md)
 
-Use `AskQuestion` with options: "All lint issues resolved" / "Need help with specific errors".
+Ask the engineer to choose "All lint issues resolved" or "Need help with specific errors".
 
 ### Step 4b: Commit Lint Fixes [AUTO]
 After lint issues are resolved (either automatically or manually) — follow the **Commit Protocol**:
@@ -247,7 +245,7 @@ Follow the replacement mappings defined in the [Block Replacements best practice
    - `openAPISpec` → `RedoclyAPIBlock` (requires path construction with `{PATH_PREFIX}`)
    - `<details>` HTML → `Details` EDS block (structural change)
 5. Report a summary: number of files changed, replacements made, and any items flagged for manual review.
-6. If any items were flagged, use `AskQuestion` with options: "I've handled the flagged items" / "No flagged items" / "Need help". Otherwise skip ahead.
+6. If any items were flagged, ask the engineer to choose "I've handled the flagged items", "No flagged items", or "Need help". Otherwise skip ahead.
 7. Commit block replacements — follow the **Commit Protocol**:
    - Stage:
      ```
@@ -289,7 +287,7 @@ This phase starts the full local dev environment so the engineer can visually re
 
 ### Step: Start Dev Servers [AUTO]
 
-Start **3 dev servers in parallel** using backgrounded shell commands (`block_until_ms: 0`), each in its own terminal:
+Start **3 dev servers in parallel** using the agent's available background-process or terminal-session capability. If the agent cannot manage background processes, provide the commands for the engineer to run in three terminals:
 
 1. **Content repo** (port 3003): Run `npm run dev` in the content repo root (`{REPO_NAME}`).
 2. **Runtime connector** (port 3002): Run `npm run dev` in `../devsite-runtime-connector`.
@@ -306,7 +304,7 @@ Pause and instruct the engineer to:
 3. Check that navigation, links, and images work correctly.
 4. If issues are found, fix them before proceeding.
 
-Use `AskQuestion` with options: "Site looks good" / "Found issues (fixing)" / "Need help".
+Ask the engineer to choose "Site looks good", "Found issues (fixing)", or "Need help".
 
 If the engineer found and fixed issues during review — follow the **Commit Protocol**:
    - Stage:
@@ -348,7 +346,7 @@ Pause and instruct the engineer to:
 3. Check the action logs for errors (the status may show green even with errors -- drill into logs).
 4. Work through any deployment errors.
 
-Use `AskQuestion` with options: "Deployment successful" / "Working through errors" / "Need help".
+Ask the engineer to choose "Deployment successful", "Working through errors", or "Need help".
 
 ---
 
@@ -356,7 +354,7 @@ Use `AskQuestion` with options: "Deployment successful" / "Working through error
 
 First, instruct the engineer to set up the necessary environment variables for Fastly Redirects by following: https://github.com/AdobeDocs/adp-devsite-utils/blob/main/README.md#fastly-redirects-script
 
-Use `AskQuestion` with options: ".env ready for Fastly Redirects" / "Need help". Only proceed when engineer confirms.
+Ask the engineer to choose ".env ready for Fastly Redirects" or "Need help". Only proceed when the engineer confirms.
 
 Then instruct the engineer to:
 
@@ -364,7 +362,7 @@ Then instruct the engineer to:
    Update Fastly by removing entry from `azureblob_transclusion_table` and adding to `adp_docs_table`.
 2. Compare stage EDS (`developer-stage.adobe.com/{PATH_PREFIX}`) with prod Gatsby (`developer.adobe.com/{PATH_PREFIX}`) for rendering differences.
 
-Use `AskQuestion` with options: "Stage looks good, Fastly updated" / "Found rendering issues" / "Need help".
+Ask the engineer to choose "Stage looks good, Fastly updated", "Found rendering issues", or "Need help".
 
 ---
 
@@ -385,7 +383,7 @@ Pause and instruct the engineer to:
 2. Add to the ticket: "passed over to {owner} for verification".
 3. List any outstanding issues in the ticket.
 
-Use `AskQuestion` with options: "Owner approved stage" / "Owner found issues (will fix)" / "Waiting for owner".
+Ask the engineer to choose "Owner approved stage", "Owner found issues (will fix)", or "Waiting for owner".
 
 ---
 
@@ -430,7 +428,7 @@ Pause and instruct the engineer to:
 2. Look out for custom workflows and notify Dawn and Pat about them.
 3. Merge to main when approved, then deploy to prod (with **DeployAll** option). **Prod only looks at main branch.**
 
-Use `AskQuestion` with options: "Merged to main" / "PR under review" / "Need help".
+Ask the engineer to choose "Merged to main", "PR under review", or "Need help".
 
 ---
 
@@ -441,7 +439,7 @@ Pause and instruct the engineer to:
 1. Test on `https://main--adp-devsite--adobedocs.aem.live/{PATH_PREFIX}`
 2. **Do NOT proceed until the customer gives the go signal that pages look good.**
 
-Use `AskQuestion` with options: "Customer approved, ready for prod" / "Still waiting for approval".
+Ask the engineer to choose "Customer approved, ready for prod" or "Still waiting for approval".
 
 ---
 
@@ -459,7 +457,7 @@ Pause and instruct the engineer to:
 2. Update Fastly: remove entry from `azureblob_transclusion_table`, add to `adp_docs_table`.
 3. **Rollback plan**: If anything goes wrong, add back the `azureblob_transclusion_table` entry and remove the `adp_docs_table` entry to roll back to Gatsby.
 
-Use `AskQuestion` with options: "Fastly prod updated" / "Need to rollback" / "Need help".
+Ask the engineer to choose "Fastly prod updated", "Need to rollback", or "Need help".
 
 ---
 
@@ -489,13 +487,13 @@ Pause and instruct the engineer to:
    - Get credentials / contributor info not yet supported
    - Private sites (i.e. those under the `AdobeDocsPrivate` org) are not yet handled by this conversion workflow
 
-Use `AskQuestion` with options: "All final checks done" / "Outstanding items remain".
+Ask the engineer to choose "All final checks done" or "Outstanding items remain".
 
 When the engineer confirms all checks are done, mark all todos as completed and congratulate them on a successful conversion.
 
 ---
 
-## TodoWrite Schema
+## Checklist schema
 
 When initializing, create todos with these IDs:
 
