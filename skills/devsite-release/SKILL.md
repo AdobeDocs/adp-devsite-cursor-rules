@@ -1,4 +1,14 @@
-Generate a Release PR description for the AdobeDocs/adp-devsite repository by comparing the `stage` branch against `main`. $ARGUMENTS
+---
+name: devsite-release
+description: Generates and publishes AdobeDocs adp-devsite stage-to-main release notes and pull requests, including Jira extraction and the dev-docs-reference changelog update. Use when preparing an EDS release for AdobeDocs/adp-devsite or when asked to run the devsite release workflow.
+compatibility: Requires the GitHub CLI (gh), Bash, network access, and permission to access AdobeDocs/adp-devsite and AdobeDocs/dev-docs-reference.
+---
+
+# Devsite release
+
+Generate a Release PR description for the AdobeDocs/adp-devsite repository by comparing the `stage` branch against `main`.
+
+When invoked with additional user arguments, treat them as context or extra instructions for this release workflow. Follow the workflow below in order unless the user explicitly asks for a narrower, non-destructive subset.
 
 ## Instructions
 
@@ -131,7 +141,7 @@ After any YAML front matter (lines between the opening and closing `---`), inser
 `- **{Feat|Fix}:** {short phrase describing what the change does}{optional inline Jira link(s)}`
 
 Rules:
-- Derive type from the PR title prefix: `feat` → **Feat**, `fix` → **Fix**, anything else (chore, refactor, docs, etc.) → **Fix**.
+- Derive type from the PR title prefix: `feat` → **Feat**, `fix` → **Fix**, anything else (chore, refactor, docs, etc.) should not be part of the release notes.
 - Keep the description short — a phrase, not a full sentence (match the tone of existing entries in the file).
 - If the PR has one or more Jira tickets (from either the `DEVSITE` or `ADPGENAI` prefix), append them inline after the description, space-separated: ` [TICKET-ID](https://jira.corp.adobe.com/browse/TICKET-ID)` (e.g. ` [DEVSITE-2490](https://jira.corp.adobe.com/browse/DEVSITE-2490)` or ` [ADPGENAI-211](https://jira.corp.adobe.com/browse/ADPGENAI-211)`). Multiple tickets go on the same line.
 - If the PR has no Jira ticket, omit the link entirely — do not add a placeholder.
