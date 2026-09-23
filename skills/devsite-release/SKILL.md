@@ -192,7 +192,7 @@ Save `$PR_URL` — it will be appended to the adp-devsite release description in
 
 ### Step 7 — Compose the Release PR Description
 
-Write the result to a markdown file at the root of the working directory. Name the file using the current date formatted as `Mon-D-release.md` (e.g. `Jun-17-release.md`, `Sep-1-release.md`). Then output the same content to the user.
+Compose the release description in memory; do not write it to a repository file.
 
 Use the following format:
 
@@ -280,4 +280,4 @@ else
 fi
 ```
 
-Save `$RELEASE_PR_URL` and use it as the `{PR URL from Step 8}` value in the Step 7 output (both in the markdown file written to the working directory and in the message shown to the user — update the file/message after the PR is created).
+Save `$RELEASE_PR_URL` and use it as the `{PR URL from Step 8}` value in the Step 7 output shown to the user. Update the message after the PR is created.
